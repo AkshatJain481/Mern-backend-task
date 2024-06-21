@@ -106,8 +106,8 @@ router.post('/forgot-password', async (req, res) => {
       host: 'smtp-relay.brevo.com',
       port: 587,
       auth: {
-        user: '771373001@smtp-brevo.com',
-        pass: '14y8IYVBqQdDtmGF'
+        user: '771373002@smtp-brevo.com',
+        pass: 'PNLcB80A3TmyO41E'
       }
     });
 
