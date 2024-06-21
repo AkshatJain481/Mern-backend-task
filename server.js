@@ -25,6 +25,9 @@ const postRoutes = require('./PostOperations/post');
 app.use(userRoutes);
 app.use(postRoutes);
 
+app.get('/', (req, res) => {
+  res.send('Backend is running');
+});
 // Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
