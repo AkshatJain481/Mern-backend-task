@@ -5,7 +5,6 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
-
 const router = express.Router();
 
 // Registration
@@ -97,33 +96,71 @@ router.post('/forgot-password', async (req, res) => {
       return res.status(404).send({ error: 'User not found' });
     }
 
-    const token = crypto.randomBytes(20).toString('hex');
-    user.resetPasswordToken = token;
-    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+    const otp = crypto.randomInt(100000, 999999).toString(); // Generate a 6-digit OTP
+    user.resetPasswordOTP = otp;
+    user.resetPasswordExpires = Date.now() + 5 * 60 * 1000; // 5 minutes
 
     await user.save();
 
     const transporter = nodemailer.createTransport({
-      service: 'Gmail',
-      auth: { user: 'your_email@gmail.com', pass: 'your_email_password' },
+      host: 'smtp-relay.brevo.com',
+      port: 587,
+      auth: {
+        user: '771373001@smtp-brevo.com',
+        pass: '14y8IYVBqQdDtmGF'
+      }
     });
 
     const mailOptions = {
       to: user.email,
-      from: 'passwordreset@demo.com',
-      subject: 'Password Reset',
+      from: 'akshatjain481@gmail.com',
+      subject: 'Password Reset OTP',
       text: `You are receiving this because you (or someone else) have requested the reset of the password for your account.
-             Please click on the following link, or paste this into your browser to complete the process:
-             http://${req.headers.host}/reset-password/${token}\n\n
+             Your OTP for resetting the password is: ${otp}\n\n
+             This OTP will expire in 5 minutes.\n
              If you did not request this, please ignore this email and your password will remain unchanged.\n`,
     };
 
     transporter.sendMail(mailOptions, (err) => {
-      res.status(200).send({ message: 'Password reset link sent successfully' });
+      if (err) {
+        return res.status(500).send({ error: 'Failed to send password reset email' , message: err});
+      }
+      console.log(mailOptions);
+      res.status(200).send({ message: 'Password reset OTP sent successfully' });
     });
   } catch (error) {
     res.status(500).send({ error: 'Failed to send password reset email', details: error });
   }
 });
+
+router.post('/reset-password', async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).send({ error: 'User not found' });
+    }
+
+    if (user.resetPasswordOTP !== otp) {
+      return res.status(400).send({ error: 'Invalid OTP' });
+    }
+
+    if (Date.now() > user.resetPasswordExpires) {
+      return res.status(400).send({ error: 'OTP has expired' });
+    }
+
+    user.password = newPassword; // Hash the password before saving in production
+    user.resetPasswordOTP = undefined;
+    user.resetPasswordExpires = undefined;
+
+    await user.save();
+
+    res.status(200).send({ message: 'Password reset successfully' });
+  } catch (error) {
+    res.status(500).send({ error: 'Failed to reset password', details: error });
+  }
+});
+
 
 module.exports = router;

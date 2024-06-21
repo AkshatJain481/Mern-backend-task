@@ -33,10 +33,13 @@ router.get('/posts', async (req, res) => {
 
 // Update a post
 router.put('/posts/:id', async (req, res) => {
-  const { content } = req.body;
-
+  const { title , description , mediaUrl , userId } = req.body;
+  console.log("below key is userId");
+  console.log(userId);
+  console.log(req.params.id);
   try {
-    const post = await Post.findByIdAndUpdate(req.params.id, { content }, { new: true });
+    const post = await Post.findOneAndUpdate({ _id : req.params.id , user: userId }, { title: title , description: description , mediaUrl: mediaUrl }, { new: true });
+    console.log(post);
     res.status(200).send(post);
   } catch (error) {
     res.status(400).send({ error: 'Failed to update post', details: error });
@@ -50,7 +53,7 @@ router.delete('/posts/:id', async (req, res) => {
     const post = await Post.findOneAndDelete({ _id: req.params.id, user: UserId });
     if(!post) return res.status(404).send({ error: 'Post not created by this email' });
     else{
-      
+
      return res.status(200).send({ message: 'Post deleted successfully' });
     }
   } catch (error) {
@@ -60,17 +63,17 @@ router.delete('/posts/:id', async (req, res) => {
 
 // Like a post
 router.post('/posts/:id/like', async (req, res) => {
-  const { userId } = req.body;
+  const { CurrentuserId } = req.body;
 
   try {
     const post = await Post.findById(req.params.id);
-    if (post.likes.includes(userId)) {
-      post.likes.pull(userId);
-    } else {
-      post.likes.push(userId);
+    if (post.likes.includes(CurrentuserId)) {
+      post.likes.pull(CurrentuserId);
+    } else {  
+      post.likes.push(CurrentuserId);
     }
     await post.save();
-    res.status(200).send(post);
+    res.status(200).send(post.likes);
   } catch (error) {
     res.status(400).send({ error: 'Failed to like/unlike post', details: error });
   }
@@ -79,8 +82,7 @@ router.post('/posts/:id/like', async (req, res) => {
 // Comment on a post
 router.post('/posts/:id/comment', async (req, res) => {
   const { CommentuserId, text } = req.body;
-  console.log(CommentuserId);
-  console.log(text);
+  
   try {
     const post = await Post.findById(req.params.id);
     post.comments.push({ text, user: CommentuserId });
